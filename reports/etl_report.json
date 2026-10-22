@@ -1,0 +1,74 @@
+[
+  {
+    "table": "district",
+    "source": "district.csv",
+    "rows_raw": 77,
+    "rows_loaded": 77,
+    "exact_duplicates_removed": 0,
+    "duplicate_primary_keys_removed": 0,
+    "missing_values": 2
+  },
+  {
+    "table": "client",
+    "source": "client.csv",
+    "rows_raw": 5369,
+    "rows_loaded": 5369,
+    "exact_duplicates_removed": 0,
+    "duplicate_primary_keys_removed": 0,
+    "missing_values": 0
+  },
+  {
+    "table": "account",
+    "source": "account.csv",
+    "rows_raw": 4500,
+    "rows_loaded": 4500,
+    "exact_duplicates_removed": 0,
+    "duplicate_primary_keys_removed": 0,
+    "missing_values": 0
+  },
+  {
+    "table": "disp",
+    "source": "disp.csv",
+    "rows_raw": 5369,
+    "rows_loaded": 5369,
+    "exact_duplicates_removed": 0,
+    "duplicate_primary_keys_removed": 0,
+    "missing_values": 0
+  },
+  {
+    "table": "card",
+    "source": "card.csv",
+    "rows_raw": 892,
+    "rows_loaded": 892,
+    "exact_duplicates_removed": 0,
+    "duplicate_primary_keys_removed": 0,
+    "missing_values": 0
+  },
+  {
+    "table": "loan",
+    "source": "loan.csv",
+    "rows_raw": 682,
+    "rows_loaded": 682,
+    "exact_duplicates_removed": 0,
+    "duplicate_primary_keys_removed": 0,
+    "missing_values": 0
+  },
+  {
+    "table": "bank_order",
+    "source": "order.csv",
+    "rows_raw": 6471,
+    "rows_loaded": 6471,
+    "exact_duplicates_removed": 0,
+    "duplicate_primary_keys_removed": 0,
+    "missing_values": 1379
+  },
+  {
+    "table": "trans",
+    "source": "trans.csv",
+    "rows_raw": 1056320,
+    "rows_loaded": 1056320,
+    "exact_duplicates_removed": 0,
+    "duplicate_primary_keys_removed": 0,
+    "missing_values": 2262171
+  }
+]
