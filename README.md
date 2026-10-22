@@ -1,8 +1,8 @@
 # Assistant NL-to-SQL : BNS Engineering
 
-Semaine 1 : données brutes -> ETL -> PostgreSQL.
-Semaine 3 : moteur NL-to-SQL (`engine/`) avec Groq.
-Semaine 2 : vues analytiques (`sql/02_views.sql`), créées automatiquement par `python -m etl.run`.
+données brutes -> ETL -> PostgreSQL.
+moteur NL-to-SQL (`engine/`) avec Groq.
+vues analytiques (`sql/02_views.sql`), créées automatiquement par `python -m etl.run`.
 
 ## Installation
 
