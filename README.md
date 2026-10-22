@@ -38,7 +38,7 @@ pytest                               # tests unitaires du nettoyage
 Déposer d'autres CSV dans `data/raw/` : `profile_data` fonctionne sur n'importe quel jeu ;
 `clean.py`, `run.py` et `sql/01_schema.sql` sont à adapter aux nouvelles tables.
 
-## Moteur NL-to-SQL (semaine 3)
+## Moteur NL-to-SQL
 
 1. Créer une clé sur https://console.groq.com/keys et la mettre dans `.env` (`GROQ_API_KEY=gsk_...`).
    Ne jamais la committer ni la partager.
