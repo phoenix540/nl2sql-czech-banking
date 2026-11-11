@@ -1,4 +1,4 @@
-# Assistant NL-to-SQL : BNS Engineering
+# Assistant NL-to-SQL 
 
 données brutes -> ETL -> PostgreSQL.
 moteur NL-to-SQL (`engine/`) avec Groq.
