@@ -35,7 +35,50 @@ def fmt(v) -> str:
     return str(v)
 
 
-def render(ans):
+def describe_chart(df: pd.DataFrame):
+    """Décrit l'affichage automatique ; renvoie (description, colonne libellé)."""
+    if df.shape == (1, 1):
+        return "valeur unique", None
+    spec = suggest_chart(df)
+    if not spec:
+        return None, None
+    kind = "courbe" if spec.kind == "line" else "diagramme en barres"
+    return f"{kind} de {', '.join(spec.ys)} selon {spec.x}", spec.x
+
+
+def make_explanation(ans):
+    if not ans.ok or ans.df.empty:
+        return None, None
+    chart, label = describe_chart(ans.df)
+    try:
+        return bot.explain(ans, chart=chart, label_col=label), None
+    except Exception as exc:  # noqa: BLE001
+        return None, str(exc)
+
+
+POINT_ICONS = {"max": "🏆", "min": "📉", "tendance": "📈", "repartition": "🧩",
+               "graphique": "👀", "info": "ℹ️"}
+
+
+def show_explanation(exp, err):
+    if exp is None:
+        if err:
+            st.caption(f"⚠️ Explication indisponible : {err}")
+        return
+    with st.container(border=True):
+        st.markdown("##### 💡 Ce qu'il faut retenir")
+        st.markdown(f"**{exp.title}**")
+        if exp.highlights:
+            cols = st.columns(len(exp.highlights))
+            for col, h in zip(cols, exp.highlights):
+                col.metric(h.label, h.value, h.delta, help=h.help)
+        if exp.points:
+            st.markdown("\n".join(f"- {POINT_ICONS.get(k, 'ℹ️')} {t}" for k, t in exp.points))
+        st.caption("Explication générée automatiquement à partir des chiffres du résultat. "
+                   "Vérifiez les valeurs dans le tableau.")
+
+
+def render(ans, explanation=None, explain_error=None):
     if ans.impossible:
         st.info(f"Cette question sort du périmètre des données : {ans.impossible}")
         return
@@ -62,6 +105,7 @@ def render(ans):
     st.subheader("Résultat")
     if df.shape == (1, 1):
         st.metric(str(df.columns[0]), fmt(df.iat[0, 0]))
+        show_explanation(explanation, explain_error)
     else:
         mode = st.radio("Affichage", ["Auto", "Tableau seul", "Barres", "Lignes"], horizontal=True)
         force = {"Barres": "bar", "Lignes": "line"}.get(mode)
@@ -72,6 +116,7 @@ def render(ans):
         elif mode in ("Barres", "Lignes"):
             st.caption("Pas de graphique possible pour ce résultat.")
         st.dataframe(df, hide_index=True)
+        show_explanation(explanation, explain_error)
         st.download_button("Télécharger en CSV", df.to_csv(index=False).encode("utf-8-sig"),
                            "resultat.csv", "text/csv")
 
@@ -102,6 +147,8 @@ with st.sidebar:
     for ex in EXAMPLES:
         st.button(ex, key=f"ex_{ex}", on_click=lambda e=ex: st.session_state.update(q=e, go=True))
     st.divider()
+    st.toggle("Expliquer les résultats", value=True, key="do_explain",
+              help="Ajoute une explication en langage naturel (un appel Groq de plus).")
     st.caption(f"Modèle : `{bot.llm.model}`")
     st.caption(f"Sécurité : {getattr(bot, 'security_mode', 'n/a')}")
     with st.expander("Schéma envoyé au modèle"):
@@ -117,5 +164,13 @@ clicked = st.button("Interroger", type="primary")
 if (clicked or st.session_state.pop("go", False)) and question.strip():
     with st.spinner("Génération et exécution de la requête…"):
         ans = bot.ask(question.strip())
+    explanation = explain_error = None
+    if st.session_state.get("do_explain", True):
+        with st.spinner("Rédaction de l'explication…"):
+            explanation, explain_error = make_explanation(ans)
     st.session_state["history"].append((question.strip(), ans.ok))
-    render(ans)
+    st.session_state["last"] = (ans, explanation, explain_error)
+
+# Le dernier résultat reste affiché quand on change le mode d'affichage (rerun Streamlit).
+if st.session_state.get("last"):
+    render(*st.session_state["last"])

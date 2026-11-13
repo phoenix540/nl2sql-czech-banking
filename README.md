@@ -1,58 +1,80 @@
 # Assistant NL-to-SQL : BNS Engineering
 
-Semaine 1 : données brutes -> ETL -> PostgreSQL.
-Semaine 3 : moteur NL-to-SQL (`engine/`) avec Groq.
-Semaine 2 : vues analytiques (`sql/02_views.sql`), créées automatiquement par `python -m etl.run`.
+Prototype de bout en bout conforme au cahier des charges : ETL CSV, PostgreSQL,
+vues analytiques, génération SQL via Groq et interface Streamlit.
 
-## Installation
+Le jeu de données actif est le Czech Financial Dataset. Les huit fichiers source
+sont dans `data/czech/`; le schéma et les exemples NL-to-SQL sont adaptés à ces
+données. Les anciennes données tunisiennes présentes dans `data/raw/` ne sont pas
+utilisées par le pipeline actif.
 
-```bash
-python -m venv .venv && source .venv/bin/activate     # Windows : .venv\Scripts\activate
-pip install -r requirements.txt
-cp .env.example .env                                   # puis changer les mots de passe
-docker compose up -d                                   # PostgreSQL 16 + utilisateur lecture seule
+## Installation (PowerShell)
+
+Depuis ce dossier :
+
+```powershell
+py -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install -r requirements.txt
+Copy-Item .env.example .env   # seulement si .env n'existe pas déjà
 ```
+
+Configure les mots de passe PostgreSQL et `GROQ_API_KEY` dans `.env`, puis démarre
+la base :
+
+```powershell
+docker compose up -d
+docker compose ps
+```
+
+## Chargement et vérification des données
+
+Le chargement réel recrée les tables et supprime les anciennes tables de démonstration.
+Sauvegarde toute base existante avant de le lancer.
+
+```powershell
+python -m etl.run --dry-run
+python -m etl.run
+python -m engine.evaluate --check-refs
+python -m pytest
+```
+
+Le mode `--dry-run` nettoie les CSV et met à jour le rapport ETL sans modifier
+PostgreSQL. Le rapport détaille les lignes lues, doublons retirés et valeurs manquantes.
 
 ## Utilisation
 
-```bash
-python scripts/generate_data.py      # (optionnel) régénère les CSV synthétiques dans data/raw/
-python -m etl.profile_data           # diagnostic qualité  -> reports/profiling_report.md
-python -m etl.run --dry-run          # nettoie sans toucher la base
-python -m etl.run                    # recrée le schéma et charge -> reports/etl_report.md
-python -m etl.check_views            # vérifie les vues + 4 questions métier d'exemple
-pytest                               # tests unitaires du nettoyage
+Lance l'interface :
+
+```powershell
+python -m streamlit run app/streamlit_app.py
 ```
 
-## Principes
+Ou interroge le moteur depuis le terminal :
 
-- **Tout est lu en texte** puis converti explicitement (pas de conversion silencieuse).
-- **Aucune ligne n'est perdue sans trace** : les lignes rejetées sont stockées avec leur
-  contenu brut et la raison dans la table `etl_rejects` et `reports/etl_rejects.csv`.
-- **Schéma documenté** (`COMMENT ON` dans `sql/01_schema.sql`) : le moteur NL-to-SQL
-  relira ces commentaires pour construire son prompt.
-- **Utilisateur lecture seule** (`RO_USER`) pour le futur moteur : le LLM ne pourra jamais modifier la base.
-
-## Remplacer les données
-
-Déposer d'autres CSV dans `data/raw/` : `profile_data` fonctionne sur n'importe quel jeu ;
-`clean.py`, `run.py` et `sql/01_schema.sql` sont à adapter aux nouvelles tables.
-
-## Moteur NL-to-SQL (semaine 3)
-
-1. Créer une clé sur https://console.groq.com/keys et la mettre dans `.env` (`GROQ_API_KEY=gsk_...`).
-   Ne jamais la committer ni la partager.
-2. Tester :
-
-```bash
-python -m engine.cli --models                       # modèles disponibles pour ta clé
-python -m engine.cli "Montant total encaissé par banque ce mois-ci"
-python -m engine.cli                                # mode interactif
-python -m engine.cli --schema                       # schéma envoyé au LLM
-python -m engine.evaluate --check-refs              # vérifie les SQL de référence (sans LLM)
-python -m engine.evaluate                           # précision sur 20 questions -> reports/eval_report.md
+```powershell
+python -m engine.cli "Combien de comptes y a-t-il dans chaque district ?"
+python -m engine.cli --schema
+python -m engine.cli --models
 ```
 
-Chaîne : question -> prompt (schéma lu automatiquement + règles + exemples) -> Groq -> validation SQL
-(SELECT seul, relations autorisées) -> exécution (utilisateur lecture seule, READ ONLY, timeout)
--> si erreur, l'erreur est renvoyée au modèle pour correction (`MAX_RETRIES`).
+L'interface affiche la requête SQL, le résultat en tableau ou graphique, et permet
+de télécharger les résultats en CSV. Une carte « Ce qu'il faut retenir » explique le
+résultat en langage naturel : une phrase de réponse, des chiffres clés (calculés en
+Python, jamais par le modèle) et quelques observations. Elle se désactive dans la barre
+latérale (un appel Groq de plus). En ligne de commande : `python -m engine.cli --explain "..."`. `python -m engine.evaluate` compare le moteur
+aux requêtes de référence et écrit `reports/eval_report.md` (appels Groq facturables).
+
+## Architecture et garde-fous
+
+- `etl/` lit et normalise les huit CSV de `data/czech/`.
+- `sql/01_schema.sql` définit les tables et relations ; `sql/02_views.sql` construit
+  les vues analytiques exposées au modèle.
+- `engine/` introspecte le schéma, appelle Groq, valide les requêtes et les exécute
+  en lecture seule avec une limite de temps et de lignes.
+- `app/` fournit l'interface de démonstration Streamlit.
+- `tests/` contient les tests unitaires, exécutables avec `python -m pytest`.
+
+Le validateur SQL est une première barrière, pas une frontière de sécurité. Configure
+le rôle PostgreSQL en lecture seule (`RO_USER` / `RO_PASSWORD`) avant tout usage avec
+des données réelles.

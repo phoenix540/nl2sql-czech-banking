@@ -7,6 +7,7 @@ from dataclasses import dataclass, field
 import pandas as pd
 
 from engine import executor, schema, settings
+from engine.explain import explain as explain_result
 from engine.llm import GroqLLM, extract_sql
 from engine.prompt import IMPOSSIBLE_TAG, build_system_prompt
 from engine.validator import validate
@@ -75,3 +76,10 @@ class NL2SQL:
                           f"Cette requête a échoué : {err}\nCorrige-la et renvoie uniquement le SQL corrigé."}]
         ans.seconds = time.time() - t0
         return ans
+
+    def explain(self, ans: Answer, chart: str | None = None, label_col: str | None = None) -> str | None:
+        """Explication en langage naturel du résultat (appel LLM supplémentaire)."""
+        if not ans.ok or ans.df.empty:
+            return None
+        return explain_result(self.llm, ans.question, ans.sql, ans.df, chart,
+                              ans.truncated, label_col)
